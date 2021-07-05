@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import subprocess
+import sys
 
 import enquiries
 import requests
@@ -105,7 +106,11 @@ class Upload():
 global headers
 headers = {'User-Agent':'Python Client for CPPMF'}
 
-query = input("Quel chant souhaites tu écouter ?\n> ")
+if len(sys.argv) < 1:
+    query = input("Quel chant souhaites tu écouter ?\n> ")
+else :
+    query = ' '.join(sys.argv[1:])
+
 search = Search(query)
 search.getResults()
 search.choisirChant()
