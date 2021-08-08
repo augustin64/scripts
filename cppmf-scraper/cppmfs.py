@@ -62,22 +62,32 @@ class Chant():
         r = requests.get(self.url,headers=headers)
         soup = BeautifulSoup(r.content, 'html.parser')
         main = soup.find('main')
+        self.paroles = main.find('div', {"class": "paroles"})
+        if self.paroles != None:
+            self.paroles = self.paroles.text
         playlist = main.find('noscript').find_all('a')
         self.enregistrements = [Upload({'title':i.text,'url':i['href']}) for i in playlist]
 
         # TODO : ajouter les paroles en tant qu'option
 
-    def choisirEnregistrement(self):
+    def choisirAction(self):
         options = [ str(i+1)+'. '+self.enregistrements[i].title for i in range(len(self.enregistrements)) ]
-        options.append(str(len(self.enregistrements)+1)+'. Quitter')
+        if self.paroles != None:
+            options.append(str(len(self.enregistrements)+1)+'. Consulter les paroles')
+            options.append(str(len(self.enregistrements)+2)+'. Quitter')
+        else :
+            options.append(str(len(self.enregistrements)+1)+'. Quitter')
         print("\033[H\033[J") # clear le terminal 
         # L'utilisateur choisit l'enregistrement qu'il souhaite consulter
-        choix = enquiries.choose('Voici les enregistrements disponibles',options)
+        self.choix = enquiries.choose('Voici les enregistrements disponibles',options)
         # On récupère l'objet correspondant
-        if '. Quitter' in choix :
-            exit(0)
+        if '. Quitter' in self.choix :
+            self.action = "quit"
+        elif '. Consulter les paroles' in self.choix:
+            self.action = "paroles"
         else :
-            self.enregistrement = self.enregistrements[int(choix.split('.')[0])-1]
+            self.action = "enregistrement"
+            self.enregistrement = self.enregistrements[int(self.choix.split('.')[0])-1]
 
     def __repr__(self):
         return ('chant:'+self.title)
@@ -118,5 +128,11 @@ search.choisirChant()
 chant = search.chant
 chant.getDetails()
 while True :
-    chant.choisirEnregistrement()
-    chant.enregistrement.play()
+    chant.choisirAction()
+    if chant.action == "enregistrement":
+        chant.enregistrement.play()
+    elif chant.action == "paroles":
+        print(chant.paroles)
+        input("[Press Enter to continue]")
+    elif chant.action == "quit":
+        exit(0)
