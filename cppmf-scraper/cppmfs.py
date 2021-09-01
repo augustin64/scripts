@@ -2,13 +2,23 @@
 import subprocess
 import sys
 
-import enquiries
 import requests
 from bs4 import BeautifulSoup
 
 # Le module enquiries n'est pas compatible avec Windows,
-# l'idéal serait donc d'en trouver une alternative pour les
-# les systèmes autres que Linux et MacOS
+# On définit donc une alternative si le module n'est pas installé
+
+try:
+    import enquiries
+    choose = enquiries.choose
+except:         # On offre une autre option si le module enquiries n'est pas installé
+                # ce module n'étant pas compatible égaleent sur toutes les plateformes
+    def choose(query,options):
+        print(query)
+        print("\n".join(["{}. {}".format(i+1,options[i]) for i in range(len(options))]))
+        response = int(input("> "))
+        return options[response-1]
+
 
 class Search():
     def __init__(self, title) :
@@ -27,7 +37,6 @@ class Search():
             while '\n' in titre_el :
                 titre_el = titre_el.replace('\n'+' '*a,'')
                 a-=1    # petite manip qui supprime les espaces superflus... à revoir pour faire quelque chsoe de plus propre
-            
             lien_el = el.find('h2').find('a')['href']
             rubriques_el = [ {'title':i.text,'url':i['href']} for i in el.find('p').find_all('a')]
 
@@ -48,7 +57,7 @@ class Search():
 
         print("\033[H\033[J") # clear le terminal
         # L'utilisateur choisit le chant qu'il souhaite consulter 
-        chant = enquiries.choose('Voici les résultats de votre recherche',options)
+        chant = choose('Voici les résultats de votre recherche',options)
         # On récupère l'objet correspondant
         self.chant = self.results[int(chant.split('.')[0])-1]
 
@@ -79,7 +88,7 @@ class Chant():
             options.append(str(len(self.enregistrements)+1)+'. Quitter')
         print("\033[H\033[J") # clear le terminal 
         # L'utilisateur choisit l'enregistrement qu'il souhaite consulter
-        self.choix = enquiries.choose('Voici les enregistrements disponibles',options)
+        self.choix = choose('Voici les enregistrements disponibles',options)
         # On récupère l'objet correspondant
         if '. Quitter' in self.choix :
             self.action = "quit"
