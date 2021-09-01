@@ -15,7 +15,7 @@ except:         # On offre une autre option si le module enquiries n'est pas ins
                 # ce module n'étant pas compatible égaleent sur toutes les plateformes
     def choose(query,options):
         print(query)
-        print("\n".join(["{}. {}".format(i+1,options[i]) for i in range(len(options))]))
+        print("\n".join(["{}".format(i) for i in options]))
         response = int(input("> "))
         return options[response-1]
 
@@ -125,8 +125,8 @@ class Upload():
 global headers
 headers = {'User-Agent':'Python Client for CPPMF'}
 
-if len(sys.argv) < 1:
-    query = input("Quel chant souhaites tu écouter ?\n> ")
+if len(sys.argv) < 2:
+    query = input("Quelle est votre recherche ?\n> ")
 else :
     query = ' '.join(sys.argv[1:])
 
