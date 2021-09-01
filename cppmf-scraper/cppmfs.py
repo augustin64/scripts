@@ -5,6 +5,12 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
+# Les modules suivant ne sont pas nécessaire pour toutes les actions,
+# et ne sont donc qu'importés quand nécessaire:
+#
+# webbrowser
+#
+
 # Le module enquiries n'est pas compatible avec Windows,
 # On définit donc une alternative si le module n'est pas installé
 
@@ -77,24 +83,36 @@ class Chant():
         playlist = main.find('noscript').find_all('a')
         self.enregistrements = [Upload({'title':i.text,'url':i['href']}) for i in playlist]
 
-        # TODO : ajouter les paroles en tant qu'option (fait, mais uniquement pour certaines versions du site, le HTML n'étant pas uniforme sur toutes les pages)
-        # TODO : ajouter le lien vers le pdf si il est disponible (contenu dans un div class="based-pld")
+        # TODO : ajouter le support pour les parole pour toutes les versions du site
+        # (Cela a été fait pour certaines version du site, mais le HTML n'est pas uniforme sur toutes les pages)
+
+        based_pld = main.find('div', {"class":"based-pld"})
+        if based_pld != None:
+            self.partition_url = based_pld.find('a')['href']
+        else :
+            self.partition_url = None
 
     def choisirAction(self):
-        options = [ str(i+1)+'. '+self.enregistrements[i].title for i in range(len(self.enregistrements)) ]
+        options = [self.enregistrements[i].title for i in range(len(self.enregistrements)) ]
+
         if self.paroles != None:
-            options.append(str(len(self.enregistrements)+1)+'. Consulter les paroles')
-            options.append(str(len(self.enregistrements)+2)+'. Quitter')
-        else :
-            options.append(str(len(self.enregistrements)+1)+'. Quitter')
+            options.append('Consulter les paroles')
+        if self.partition_url != None:
+            options.append('Consulter la partition')    
+        options.append('Quitter')
+
         print("\033[H\033[J") # clear le terminal 
         # L'utilisateur choisit l'enregistrement qu'il souhaite consulter
+        options = [str(i+1)+'. '+options[i] for i in range(len(options))]
         self.choix = choose('Voici les enregistrements disponibles',options)
         # On récupère l'objet correspondant
-        if '. Quitter' in self.choix :
+
+        if 'Quitter' in self.choix :
             self.action = "quit"
-        elif '. Consulter les paroles' in self.choix:
+        elif 'Consulter les paroles' in self.choix:
             self.action = "paroles"
+        elif 'Consulter la partition' in self.choix:
+            self.action = "partition"
         else :
             self.action = "enregistrement"
             self.enregistrement = self.enregistrements[int(self.choix.split('.')[0])-1]
@@ -144,5 +162,8 @@ while True :
     elif chant.action == "paroles":
         print(chant.paroles)
         input("[Press Enter to continue]")
+    elif chant.action == "partition":
+        import webbrowser
+        webbrowser.open(chant.partition_url)
     elif chant.action == "quit":
         exit(0)
