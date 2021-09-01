@@ -12,7 +12,7 @@ try:
     import enquiries
     choose = enquiries.choose
 except:         # On offre une autre option si le module enquiries n'est pas installé
-                # ce module n'étant pas compatible égaleent sur toutes les plateformes
+                # ce module n'étant pas compatible de manière égale sur toutes les plateformes
     def choose(query,options):
         print(query)
         print("\n".join(["{}".format(i) for i in options]))
@@ -28,7 +28,7 @@ class Search():
         url = "https://www.choralepolefontainebleau.org/?s=" + self.title
         r = requests.get(url, headers=headers)
         soup = BeautifulSoup(r.content, 'html.parser')
-        # On récupère tous les items rzenvoyés sur la page web
+        # On récupère tous les items renvoyés sur la page web
         chants = soup.find_all('article', {"class": "post"})
         liste_chants = []
         for el in chants :
@@ -36,7 +36,7 @@ class Search():
             a = 12
             while '\n' in titre_el :
                 titre_el = titre_el.replace('\n'+' '*a,'')
-                a-=1    # petite manip qui supprime les espaces superflus... à revoir pour faire quelque chsoe de plus propre
+                a-=1    # petite manip qui supprime les espaces superflus... à revoir pour faire quelque chose de plus propre
             lien_el = el.find('h2').find('a')['href']
             rubriques_el = [ {'title':i.text,'url':i['href']} for i in el.find('p').find_all('a')]
 
@@ -77,7 +77,8 @@ class Chant():
         playlist = main.find('noscript').find_all('a')
         self.enregistrements = [Upload({'title':i.text,'url':i['href']}) for i in playlist]
 
-        # TODO : ajouter les paroles en tant qu'option
+        # TODO : ajouter les paroles en tant qu'option (fait, mais uniquement pour certaines versions du site, le HTML n'étant pas uniforme sur toutes les pages)
+        # TODO : ajouter le lien vers le pdf si il est disponible (contenu dans un div class="based-pld")
 
     def choisirAction(self):
         options = [ str(i+1)+'. '+self.enregistrements[i].title for i in range(len(self.enregistrements)) ]
