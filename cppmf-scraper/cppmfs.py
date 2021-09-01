@@ -75,20 +75,35 @@ class Chant():
 
     def getDetails(self):
         r = requests.get(self.url,headers=headers)
-        soup = BeautifulSoup(r.content, 'html.parser')
-        main = soup.find('main')
-        self.paroles = main.find('div', {"class": "paroles"})
-        if self.paroles != None:
-            self.paroles = self.paroles.text
+        self.soup = BeautifulSoup(r.content, 'html.parser')
+        
+        self.getEnregistrements()
+        self.getParoles()
+        self.getPartitionUrl()
+
+    def getEnregistrements(self):
+        main = self.soup.find('main')
         noscript = main.find('noscript')
         if noscript != None :
             playlist = noscript.find_all('a')
             self.enregistrements = [Upload({'title':i.text,'url':i['href']}) for i in playlist]
         else :
             self.enregistrements = []
-        # TODO : ajouter le support pour les parole pour toutes les versions du site
-        # (Cela a été fait pour certaines version du site, mais le HTML n'est pas uniforme sur toutes les pages)
 
+    def getParoles(self):
+        main = self.soup.find('main')
+        self.paroles = main.find('div', {"class": "paroles"})
+        if self.paroles != None:
+            self.paroles = self.paroles.text
+        else: 
+            h3 = main.find_all('h3')
+            for i in h3 :
+                if i.text == "Paroles :":
+                    self.paroles = '\n\n'.join([ j.text for j in i.parent.find_all('p') ]) + '\n'
+                    break
+
+    def getPartitionUrl(self):
+        main = self.soup.find('main')
         based_pld = main.find('div', {"class":"based-pld"})
         if based_pld != None:
             self.partition_url = based_pld.find('a')['href']
