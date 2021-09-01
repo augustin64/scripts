@@ -80,9 +80,12 @@ class Chant():
         self.paroles = main.find('div', {"class": "paroles"})
         if self.paroles != None:
             self.paroles = self.paroles.text
-        playlist = main.find('noscript').find_all('a')
-        self.enregistrements = [Upload({'title':i.text,'url':i['href']}) for i in playlist]
-
+        noscript = main.find('noscript')
+        if noscript != None :
+            playlist = noscript.find_all('a')
+            self.enregistrements = [Upload({'title':i.text,'url':i['href']}) for i in playlist]
+        else :
+            self.enregistrements = []
         # TODO : ajouter le support pour les parole pour toutes les versions du site
         # (Cela a été fait pour certaines version du site, mais le HTML n'est pas uniforme sur toutes les pages)
 
@@ -104,7 +107,10 @@ class Chant():
         print("\033[H\033[J") # clear le terminal 
         # L'utilisateur choisit l'enregistrement qu'il souhaite consulter
         options = [str(i+1)+'. '+options[i] for i in range(len(options))]
-        self.choix = choose('Voici les enregistrements disponibles',options)
+        display_text = 'Voici les données disponibles pour ce chant'
+        if len(options) == 1 :
+            display_text = "Aucune donnée n'a pu être récupérée pour ce chant"
+        self.choix = choose(display_text,options)
         # On récupère l'objet correspondant
 
         if 'Quitter' in self.choix :
