@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # max_score:392
+import sys
 import random
+from select import select
+
 try:
     import enquiries
     choose = enquiries.choose
@@ -109,24 +112,61 @@ mnemoschematik = {
 
 crs = [j for j in morse.keys()]
 
-def multi_quiz(length=10):
+def diff(a, b):
+    """
+    Renvoie la différence, formattée en couleurs entre les chaînes de charactères a et b
+    """
+    s = ''
+    if len(a) > len(b) :
+        b = b + " "*(len(a)-len(b))
+    if len(b) > len(a) :
+        a = a + " "*(len(b)-len(a))
+    for i in range(len(a)):
+        if a[i] != b[i]:
+            s += '\x1b[7;30;41m' + b[i]
+        else :
+            s += '\x1b[0m\x1b[7;30;42m' + b[i]
+    s += '\x1b[0m'
+    return s
+
+def multi_quiz(length=10, timed=True,timeout=5):
+    """
+    Pouvant comporter un timer ou non, ce quiz renvoie "length" charactères encodés en morse à décoder
+    """
     score = 0
     while True:
         clear_text = "".join([random.choice(crs) for i in range(length)])
         encoded = "/".join([morse[i] for i in clear_text])
-        if input(encoded+"\n> ").lower() != clear_text:
-            print("Faux ! La bonne réponse {}".format(clear_text))
+        if timed:
+            s = timed_input(encoded,timeout=length*timeout)
+        else :
+            s = input(encoded + "\n").lower()
+
+        if s == TimeoutError:
+            print("Temps écoulé, sois plus rapide la prochaine fois !")
+        elif s != clear_text:
+            print(f"Faux ! La bonne réponse : {clear_text}")
+            print(f"Votre réponse était :     {diff(clear_text,s)}")
             print("Votre score est de {} points".format(score))
             break
         else :
             score += length
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
-def int_quiz():
+def int_quiz(timed=True,timeout=5):
+    """
+    Pouvant comporter un timer ou non, ce quiz renvoie une lettre ou chiffre à encoder en morse
+    """
     score = 0
     while True:
         clear_text = random.choice(crs)
-        if input(clear_text.upper()+"\n> ") != morse[clear_text]:
+        if timed:
+            s = timed_input(clear_text.upper(),timeout=timeout)
+        else :
+            s = input(clear_text.upper() + "\n> ")
+        if s == TimeoutError:
+            print("Temps écoulé, sois plus rapide la prochaine fois !")
+        elif s != morse[clear_text]:
             if clear_text in mnemotechnique.keys():
                 print("Faux ! La bonne réponse est {} [{}]".format(morse[clear_text],mnemotechnique[clear_text]))
             else:
@@ -137,11 +177,20 @@ def int_quiz():
             score +=1
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
-def quiz():
+def quiz(timed=True, timeout=5):
+    """
+    Pouvant comporter un timer ou non, ce quiz renvoie un charactère en morse à décoder
+    """
     score = 0
     while True:
         clear_text = random.choice(crs)
-        if input(str(morse[clear_text])+"\n> ").lower() != clear_text:
+        if timed:
+            s = timed_input(str(morse[clear_text]),timeout=timeout)
+        else :
+            s = input(str(morse[clear_text]) + "\n> ")
+        if s == TimeoutError:
+            print("Temps écoulé, sois plus rapide la prochaine fois !")
+        elif s != clear_text:
             if clear_text in mnemotechnique.keys():
                 print("Faux ! La bonne réponse est {}[{}]".format(clear_text,mnemotechnique[clear_text]))
             else:
@@ -152,18 +201,42 @@ def quiz():
             score +=1
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
-def quiz_junior():
+def quiz_junior(timed=True, timeout=5):
+    """
+    Pouvant comporter un timer ou non, ce quiz renvoie un moyen mnémotechnique dont il faut extraire le morse
+    """
     score = 0
     crs = [j for j in mnemoschematik.keys()]
     while True:
         memo = random.choice(crs)
-        if input(str(mnemoschematik[memo])+"\n> ").lower() != memo:
+        if timed:
+            s = timed_input(mnemoschematik[memo], timeout=timeout)
+        else :
+            s = input(mnemoschematik[memo] + "\n> ")
+        if s == TimeoutError:
+            print("tmps écoulé, sois plus rapide la prochaine fois !")
+        elif s != memo:
             print("Faux ! La bonne réponse est {}".format(memo))
             print("Votre score est de {} points".format(score))
             break
         else:
             score +=1
             print("Bonne réponse ! Votre score est de {} points".format(score))
+
+
+def timed_input(prompt, timeout=10):
+        """
+        Cette fonction utilisant des éléments systèmes propres aux systèmes UNIX, cette fonction demanderait à être rendue compatible
+        avec les systèmes Windows.
+        """
+        print(prompt)
+        rlist, _, _ = select([sys.stdin], [], [], timeout) 
+        if rlist:
+            s = sys.stdin.readline()
+            return s[:-1].lower()
+        else:
+            return TimeoutError
+
 
 gamemodes = {
     "Junior":quiz_junior,
