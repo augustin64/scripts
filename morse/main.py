@@ -3,6 +3,7 @@
 import sys
 import random
 from select import select
+from optparse import OptionParser
 
 try:
     import enquiries
@@ -238,12 +239,43 @@ def timed_input(prompt, timeout=10):
             return TimeoutError
 
 
+parser = OptionParser()
+parser.add_option("-g", "--gamemode", dest="gamemode",
+                  help="choose GAMEMODE", type="string", metavar="(JUNIOR|INTERMEDIAIRE|NORMAL|EXPERT)")
+parser.add_option("-T","--timeout", action="store",
+                  dest="timeout",type="int",help="set TIMEOUT",
+                  metavar="TIMEOUT", default=5)
+parser.add_option("-d", "--disable-timer",
+                  action="store_false", dest="timed",
+                  help="Disable timer", default=True)
+parser.add_option("-l","--length", dest="length",
+                  help="Nombre d'éléments, disponible uniquement pour le mode de jeu EXPERT", 
+                  action="store",type="int", metavar="NOMBRE D'ELEMENTS", default=10)
+(options, args) = parser.parse_args()
+
 gamemodes = {
     "Junior":quiz_junior,
     "Intermédiaire":int_quiz,
     "Normal":quiz,
     "Expert":multi_quiz,
 }
-gm = choose("Choisissez votre mode de jeu",[i for i in gamemodes.keys()])
+if options.gamemode != None:
+    gamemodes = {
+        "JUNIOR":quiz_junior,
+        "INTERMEDIAIRE":int_quiz,
+        "NORMAL":quiz,
+        "EXPERT":multi_quiz
+    }
+    if options.gamemode not in gamemodes :
+        print(f"Option not available gamemode {options.gamemode}")
+        raise ValueError
+    else :
+        gm = gamemodes[options.gamemode]
+else:
+    gm = gamemodes[choose("Choisissez votre mode de jeu",[i for i in gamemodes.keys()])]
+
 while True:
-    gamemodes[gm]()
+    if gm == multi_quiz :
+        gm(timed=options.timed,timeout=options.timeout, length=options.length)
+    else:
+        gm(timed=options.timed,timeout=options.timeout)
