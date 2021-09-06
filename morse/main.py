@@ -2,8 +2,14 @@
 # max_score:392
 import sys
 import random
-from select import select
+import platform
 from optparse import OptionParser
+
+if platform.system() == 'Windows':
+    import msvcrt
+    import time
+else :
+    from select import select
 
 try:
     import enquiries
@@ -117,18 +123,21 @@ def diff(a, b):
     """
     Renvoie la différence, formattée en couleurs entre les chaînes de charactères a et b
     """
-    s = ''
-    if len(a) > len(b) :
-        b = b + " "*(len(a)-len(b))
-    if len(b) > len(a) :
-        a = a + " "*(len(b)-len(a))
-    for i in range(len(a)):
-        if a[i] != b[i]:
-            s += '\x1b[7;30;41m' + b[i]
-        else :
-            s += '\x1b[0m\x1b[7;30;42m' + b[i]
-    s += '\x1b[0m'
-    return s
+    if platform.system() != "Windows" :
+        s = ''
+        if len(a) > len(b) :
+            b = b + " "*(len(a)-len(b))
+        if len(b) > len(a) :
+            a = a + " "*(len(b)-len(a))
+        for i in range(len(a)):
+            if a[i] != b[i]:
+                s += '\x1b[7;30;41m' + b[i]
+            else :
+                s += '\x1b[0m\x1b[7;30;42m' + b[i]
+        s += '\x1b[0m'
+        return s
+    else :
+        return b
 
 def multi_quiz(length=10, timed=True,timeout=5):
     """
@@ -224,19 +233,28 @@ def quiz_junior(timed=True, timeout=5):
             score +=1
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
-
 def timed_input(prompt, timeout=10):
-        """
-        Cette fonction utilisant des éléments systèmes propres aux systèmes UNIX, cette fonction demanderait à être rendue compatible
-        avec les systèmes Windows.
-        """
-        print(prompt)
-        rlist, _, _ = select([sys.stdin], [], [], timeout) 
-        if rlist:
-            s = sys.stdin.readline()
-            return s[:-1].lower()
-        else:
+        if platform.system() != 'Windows' :
+            print(prompt)
+            rlist, _, _ = select([sys.stdin], [], [], timeout) 
+            if rlist:
+                s = sys.stdin.readline()
+                return s[:-1].lower()
+            else:
+                return TimeoutError
+        else :
+            sys.stdout.write(prompt+'\n')
+            sys.stdout.flush()
+            endtime = time.monotonic() + timeout
+            result = []
+            while time.monotonic() < endtime:
+                if msvcrt.kbhit():
+                    result.append(msvcrt.getwche())
+                    if result[-1] == '\r':
+                        return ''.join(result[:-1])
+                time.sleep(0.04)
             return TimeoutError
+            
 
 
 parser = OptionParser()
