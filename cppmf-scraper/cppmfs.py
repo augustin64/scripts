@@ -1,15 +1,17 @@
 #!/usr/bin/python3
 import subprocess
 import sys
+import webbrowser
 
 import requests
 from bs4 import BeautifulSoup
 
-# Les modules suivant ne sont pas nécessaire pour toutes les actions,
-# et ne sont donc qu'importés quand nécessaire:
-#
-# webbrowser
-#
+# TODO:
+# ✔ Ajouter une option pour ouvrir la page dans le navigateur
+#   Ouvrir automatiquement le premier résultat si il est le seul correspondant à la requête
+#   Ajouter des options en tant que flags avec optparser
+#   Ajouter un flag pour ouvrir le premier résultat sans intervention de l'utilisateur
+#   Ajouter un flag pour activer/désactiver l'affichage des paroles lors de la lecture (activé par défaut)
 
 # Le module enquiries n'est pas compatible avec Windows,
 # On définit donc une alternative si le module n'est pas installé
@@ -92,31 +94,34 @@ class Chant():
 
     def getParoles(self):
         main = self.soup.find('main')
-        self.paroles = main.find('div', {"class": "paroles"})
-        if self.paroles != None:
-            self.paroles = self.paroles.text
+        paroles = main.find('div', {"class": "paroles"})
+        self.paroles = Paroles(None)
+        if paroles != None:
+            self.paroles = Paroles(paroles)
         else: 
             h3 = main.find_all('h3')
             for i in h3 :
                 if i.text == "Paroles :":
-                    self.paroles = '\n\n'.join([ j.text for j in i.parent.find_all('p') ]) + '\n'
+                    paroles = '\n\n'.join([ j.text for j in i.parent.find_all('p') ]) + '\n'
+                    self.paroles = Paroles(paroles)
                     break
 
     def getPartitionUrl(self):
         main = self.soup.find('main')
         based_pld = main.find('div', {"class":"based-pld"})
         if based_pld != None:
-            self.partition_url = based_pld.find('a')['href']
+            self.partition = Partition(based_pld.find('a')['href'])
         else :
-            self.partition_url = None
+            self.partition = Partition(None)
 
     def choisirAction(self):
         options = [self.enregistrements[i].title for i in range(len(self.enregistrements)) ]
 
-        if self.paroles != None:
+        if str(self.paroles) != "None":
             options.append('Consulter les paroles')
-        if self.partition_url != None:
+        if str(self.partition) != "None":
             options.append('Consulter la partition')    
+        options.append('Ouvrir dans le navigateur')
         options.append('Quitter')
 
         print("\033[H\033[J") # clear le terminal 
@@ -126,10 +131,15 @@ class Chant():
         if len(options) == 1 :
             display_text = "Aucune donnée n'a pu être récupérée pour ce chant"
         self.choix = choose(display_text,options)
+        self.enregistrement = Upload({
+            "title":None,
+            "url":None
+        })
         # On récupère l'objet correspondant
-
         if 'Quitter' in self.choix :
             self.action = "quit"
+        elif "Ouvrir dans le navigateur" in self.choix:
+            self.action = "open_url"
         elif 'Consulter les paroles' in self.choix:
             self.action = "paroles"
         elif 'Consulter la partition' in self.choix:
@@ -140,6 +150,30 @@ class Chant():
 
     def __repr__(self):
         return ('chant:'+self.title)
+
+    def open_in_browser(self):
+        webbrowser.open(self.url)
+
+class Partition():
+    def __init__(self,url):
+        self.url = url
+
+    def __repr__(self):
+        return str(self.url)
+    
+    def open(self):
+        webbrowser.open(self.url)
+
+class Paroles():
+    def __init__(self,paroles):
+        self.content = paroles
+        
+    def __repr__(self):
+        return str(self.content)
+    
+    def show(self):
+        print(self.content)
+        input("[Press <Enter> to continue]")
 
 class Rubrique():
     def __init__(self,data):
@@ -161,6 +195,8 @@ class Upload():
     def __repr__(self):
         return ('upload:'+self.title)
 
+def quit():
+    exit(0)
 
 global headers
 headers = {'User-Agent':'Python Client for CPPMF'}
@@ -178,13 +214,11 @@ chant = search.chant
 chant.getDetails()
 while True :
     chant.choisirAction()
-    if chant.action == "enregistrement":
-        chant.enregistrement.play()
-    elif chant.action == "paroles":
-        print(chant.paroles)
-        input("[Press Enter to continue]")
-    elif chant.action == "partition":
-        import webbrowser
-        webbrowser.open(chant.partition_url)
-    elif chant.action == "quit":
-        exit(0)
+    actions = {
+        "enregistrement":chant.enregistrement.play,
+        "paroles":chant.paroles.show,
+        "partition":chant.partition.open,
+        "open_url":chant.open_in_browser,
+        "quit":quit
+    }
+    actions[chant.action]()
