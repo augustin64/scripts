@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 import subprocess
-import sys
 import webbrowser
 
 import requests
 from bs4 import BeautifulSoup
+from optparse import OptionParser
+
+global headers
+global parsed_options
 
 # TODO:
 # ✔ Ajouter une option pour ouvrir la page dans le navigateur
-#   Ouvrir automatiquement le premier résultat si il est le seul correspondant à la requête
-#   Ajouter des options en tant que flags avec optparser
-#   Ajouter un flag pour ouvrir le premier résultat sans intervention de l'utilisateur
-#   Ajouter un flag pour activer/désactiver l'affichage des paroles lors de la lecture (activé par défaut)
+# ✔ Ouvrir automatiquement le premier résultat si il est le seul correspondant à la requête
+# ✔ Ajouter des options en tant que flags avec optparser
+# ✔ Ajouter un flag pour ouvrir le premier résultat sans intervention de l'utilisateur
+# ✔ Ajouter un flag pour activer/désactiver l'affichage des paroles lors de la lecture (activé par défaut)
 
 # Le module enquiries n'est pas compatible avec Windows,
 # On définit donc une alternative si le module n'est pas installé
@@ -30,7 +33,7 @@ except:  # On offre une autre option si le module enquiries n'est pas installé
 
 
 class Search:
-    def __init__(self, title):
+    def __init__(self, title, options=None):
         self.title = title
 
     def getResults(self):
@@ -64,6 +67,19 @@ class Search:
         self.results = liste_chants
 
     def choisirChant(self):
+        if len(self.results) == 0:
+            print("Aucun résultat pour '" + self.title + "'")
+            exit(0)
+        elif parsed_options.force_first:
+            self.chant = self.results[0]
+            return
+        elif len(self.results) == 1:
+            print(
+                f"Un seul résultat est disponible, choix effectué automatiquement ({self.results[0].title})"
+            )
+            self.chant = self.results[0]
+            return
+
         options = [
             str(i + 1)
             + ". "
@@ -73,15 +89,12 @@ class Search:
             for i in range(len(self.results))
         ]
 
-        if len(options) == 0:
-            print("Aucun résultat pour '" + self.title + "'")
-            exit(0)
-
         print("\033[H\033[J")  # clear le terminal
         # L'utilisateur choisit le chant qu'il souhaite consulter
         chant = choose("Voici les résultats de votre recherche", options)
         # On récupère l'objet correspondant
         self.chant = self.results[int(chant.split(".")[0]) - 1]
+        return
 
 
 class Chant:
@@ -104,7 +117,7 @@ class Chant:
         if noscript != None:
             playlist = noscript.find_all("a")
             self.enregistrements = [
-                Upload({"title": i.text, "url": i["href"]}) for i in playlist
+                Upload({"title": i.text, "url": i["href"]}, self) for i in playlist
             ]
         else:
             self.enregistrements = []
@@ -149,11 +162,11 @@ class Chant:
         print("\033[H\033[J")  # clear le terminal
         # L'utilisateur choisit l'enregistrement qu'il souhaite consulter
         options = [str(i + 1) + ". " + options[i] for i in range(len(options))]
-        display_text = "Voici les données disponibles pour ce chant"
+        display_text = f"Voici les données disponibles pour : {self.title}"
         if len(options) == 1:
             display_text = "Aucune donnée n'a pu être récupérée pour ce chant"
         self.choix = choose(display_text, options)
-        self.enregistrement = Upload({"title": None, "url": None})
+        self.enregistrement = Upload({"title": None, "url": None}, self)
         # On récupère l'objet correspondant
         if "Quitter" in self.choix:
             self.action = "quit"
@@ -192,6 +205,8 @@ class Paroles:
         self.content = paroles
 
     def __repr__(self):
+        if self.content is None:
+            return ""
         return str(self.content)
 
     def show(self):
@@ -209,12 +224,16 @@ class Rubrique:
 
 
 class Upload:
-    def __init__(self, data):
+    def __init__(self, data, parent):
         self.title = data["title"]
         self.url = data["url"]
+        self.parent = parent
 
     def play(self):
-        print("À l'écoute:", self.title, "\n")
+        if parsed_options.afficher_paroles:
+            print(self.parent.paroles)
+        else:
+            print("À l'écoute:", self.title, "\n")
         subprocess.call(["mpv", self.url])
         # à améliorer de manière à être compatible avec des systèmes n'ayant pas installé mpv
 
@@ -226,15 +245,34 @@ def quit():
     exit(0)
 
 
-global headers
 headers = {"User-Agent": "Python Client for CPPMF"}
 
-if len(sys.argv) < 2:
+parser = OptionParser()
+parser.add_option(
+    "-a",
+    "--afficher-paroles",
+    dest="afficher_paroles",
+    help="Afficher les paroles lors de la lecture d'un audio",
+    action="store_true",
+    default=False,
+)
+parser.add_option(
+    "-f",
+    "--force-first",
+    dest="force_first",
+    help="Choisir automatiquement le premier chant",
+    action="store_true",
+    default=False,
+)
+
+(parsed_options, args) = parser.parse_args()
+
+if len(args) == 0:
     query = input("Quelle est votre recherche ?\n> ")
 else:
-    query = " ".join(sys.argv[1:])
+    query = " ".join(args)
 
-search = Search(query)
+search = Search(query, options=parsed_options)
 search.getResults()
 search.choisirChant()
 
