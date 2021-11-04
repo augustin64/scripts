@@ -243,7 +243,7 @@ def quiz_junior(timed=True, timeout=10):
         if s == TimeoutError:
             print("tmps écoulé, sois plus rapide la prochaine fois !")
         elif s != memo:
-            print("Faux ! La bonne réponse est {}".format(memo))
+            print("\x1b[0;37;41mFaux ! La bonne réponse est {}\x1b[0m".format(memo))
             print("Votre score est de {} points".format(score))
             break
         else:
