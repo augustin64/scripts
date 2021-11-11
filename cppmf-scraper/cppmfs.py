@@ -113,14 +113,15 @@ class Chant:
 
     def getEnregistrements(self):
         main = self.soup.find("main")
-        noscript = main.find("noscript")
-        if noscript != None:
-            playlist = noscript.find_all("a")
-            self.enregistrements = [
-                Upload({"title": i.text, "url": i["href"]}, self) for i in playlist
-            ]
-        else:
-            self.enregistrements = []
+        noscript = main.find_all("noscript")
+
+        self.enregistrements = []
+
+        for division in noscript:
+            for element in division.find_all("a"):
+                self.enregistrements.append(
+                    Upload({"title": element.text, "url": element["href"]}, self)
+                )
 
     def getParoles(self):
         main = self.soup.find("main")
