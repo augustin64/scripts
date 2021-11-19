@@ -1,10 +1,14 @@
 #!/usr/bin/python3
+import json
+import os
 import subprocess
+import sys
+import urllib.request
 import webbrowser
+from optparse import OptionParser
 
 import requests
 from bs4 import BeautifulSoup
-from optparse import OptionParser
 
 global headers
 global parsed_options
@@ -36,7 +40,7 @@ class Search:
     def __init__(self, title, options=None):
         self.title = title
 
-    def getResults(self):
+    def get_results(self):
         url = "https://www.choralepolefontainebleau.org/?s=" + self.title
         r = requests.get(url, headers=headers)
         soup = BeautifulSoup(r.content, "html.parser")
@@ -66,7 +70,7 @@ class Search:
 
         self.results = liste_chants
 
-    def choisirChant(self):
+    def choisir_chant(self):
         if len(self.results) == 0:
             print("Aucun résultat pour '" + self.title + "'")
             exit(0)
@@ -103,15 +107,15 @@ class Chant:
         self.url = data["url"]
         self.rubriques = [Rubrique(i) for i in data["rubriques"]]
 
-    def getDetails(self):
+    def get_details(self):
         r = requests.get(self.url, headers=headers)
         self.soup = BeautifulSoup(r.content, "html.parser")
 
-        self.getEnregistrements()
-        self.getParoles()
-        self.getPartitionUrl()
+        self.get_enregistrements()
+        self.get_paroles()
+        self.get_partition_url()
 
-    def getEnregistrements(self):
+    def get_enregistrements(self):
         main = self.soup.find("main")
         noscript = main.find_all("noscript")
 
@@ -123,7 +127,7 @@ class Chant:
                     Upload({"title": element.text, "url": element["href"]}, self)
                 )
 
-    def getParoles(self):
+    def get_paroles(self):
         main = self.soup.find("main")
         paroles = main.find("div", {"class": "paroles"})
         self.paroles = Paroles(None)
@@ -140,7 +144,7 @@ class Chant:
                     self.paroles = Paroles(paroles)
                     break
 
-    def getPartitionUrl(self):
+    def get_partition_url(self):
         main = self.soup.find("main")
         based_pld = main.find("div", {"class": "based-pld"})
         if based_pld != None:
@@ -148,7 +152,7 @@ class Chant:
         else:
             self.partition = Partition(None)
 
-    def choisirAction(self):
+    def choisir_action(self):
         options = [
             self.enregistrements[i].title for i in range(len(self.enregistrements))
         ]
@@ -158,6 +162,7 @@ class Chant:
         if str(self.partition) != "None":
             options.append("Consulter la partition")
         options.append("Ouvrir dans le navigateur")
+        options.append("Télécharger")
         options.append("Quitter")
 
         print("\033[H\033[J")  # clear le terminal
@@ -177,17 +182,38 @@ class Chant:
             self.action = "paroles"
         elif "Consulter la partition" in self.choix:
             self.action = "partition"
+        elif "Télécharger" in self.choix :
+            self.action = "download"
         else:
             self.action = "enregistrement"
             self.enregistrement = self.enregistrements[
                 int(self.choix.split(".")[0]) - 1
             ]
 
-    def __repr__(self):
-        return "chant:" + self.title
+    def download(self):
+        path = self.title.replace(' ', '_')
+        os.mkdir(path)
+        data = {
+            "titre": self.title,
+            "url": self.url,
+            "paroles": self.paroles.content
+        }
+        with open(path+"/index.json", "w") as index:
+            json.dump(data, index)
+
+        for enregistrement in self.enregistrements:
+            urllib.request.urlretrieve(
+                enregistrement.url, 
+                path + "/" + enregistrement.title.replace(" ", "_") + ".mp3"
+            )
+        print("All data downloaded, exiting")
+        sys.exit()
 
     def open_in_browser(self):
         webbrowser.open(self.url)
+
+    def __repr__(self):
+        return "chant:" + self.title
 
 
 class Partition:
@@ -242,8 +268,8 @@ class Upload:
         return "upload:" + self.title
 
 
-def quit():
-    exit(0)
+def stop():
+    sys.exit()
 
 
 headers = {"User-Agent": "Python Client for CPPMF"}
@@ -269,23 +295,24 @@ parser.add_option(
 (parsed_options, args) = parser.parse_args()
 
 if len(args) == 0:
-    query = input("Quelle est votre recherche ?\n> ")
+    QUERY = input("Quelle est votre recherche ?\n> ")
 else:
-    query = " ".join(args)
+    QUERY = " ".join(args)
 
-search = Search(query, options=parsed_options)
-search.getResults()
-search.choisirChant()
+search = Search(QUERY, options=parsed_options)
+search.get_results()
+search.choisir_chant()
 
 chant = search.chant
-chant.getDetails()
+chant.get_details()
 while True:
-    chant.choisirAction()
+    chant.choisir_action()
     actions = {
         "enregistrement": chant.enregistrement.play,
         "paroles": chant.paroles.show,
         "partition": chant.partition.open,
         "open_url": chant.open_in_browser,
-        "quit": quit,
+        "download": chant.download,
+        "quit": stop,
     }
     actions[chant.action]()
