@@ -126,7 +126,7 @@ crs = [j for j in morse.keys()]
 
 def diff(a, b):
     """
-    Renvoie la différence, formattée en couleurs entre les chaînes de charactères a et b
+    Renvoie la différence, formatée en couleurs entre les chaînes de caractères a et b
     """
     if platform.system() != "Windows":
         s = ""
@@ -145,9 +145,9 @@ def diff(a, b):
         return b
 
 
-def multi_quiz(length=10, timed=True, timeout=5):
+def multi_quiz(length=10, timed=True, timeout=5, show_answer=False):
     """
-    Pouvant comporter un timer ou non, ce quiz renvoie "length" charactères encodés en morse à décoder
+    Pouvant comporter un timer ou non, ce quiz renvoie "length" caractères encodés en morse à décoder
     """
     score = 0
     while True:
@@ -159,7 +159,9 @@ def multi_quiz(length=10, timed=True, timeout=5):
             s = input(encoded + "\n").lower()
 
         if s == TimeoutError:
-            print(f"\nTemps écoulé, sois plus rapide la prochaine fois ! La réponse était : {clear_text}")
+            print(f"\nTemps écoulé, sois plus rapide la prochaine fois !")
+            if show_answer:
+                print(f"La bonne réponse est {clear_text}")
         elif s != clear_text:
             print(f"Faux ! La bonne réponse : {clear_text}")
             print(f"Votre réponse était :     {diff(clear_text,s)}")
@@ -170,7 +172,7 @@ def multi_quiz(length=10, timed=True, timeout=5):
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
 
-def int_quiz(timed=True, timeout=10):
+def int_quiz(timed=True, timeout=10, show_answer=False):
     """
     Pouvant comporter un timer ou non, ce quiz renvoie une lettre ou chiffre à encoder en morse
     """
@@ -183,6 +185,16 @@ def int_quiz(timed=True, timeout=10):
             s = input(clear_text.upper() + "\n> ")
         if s == TimeoutError:
             print("Temps écoulé, sois plus rapide la prochaine fois !")
+            if show_answer:
+                if clear_text in mnemotechnique.keys():
+                    print(
+                        "La bonne réponse est {} [{}]".format(
+                            morse[clear_text], mnemotechnique[clear_text]
+                        )
+                    )
+                else:
+                    print("La bonne réponse est {}".format(morse[clear_text]))
+
         elif s != morse[clear_text]:
             if clear_text in mnemotechnique.keys():
                 print(
@@ -199,9 +211,9 @@ def int_quiz(timed=True, timeout=10):
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
 
-def quiz(timed=True, timeout=10):
+def quiz(timed=True, timeout=10, show_answer=False):
     """
-    Pouvant comporter un timer ou non, ce quiz renvoie un charactère en morse à décoder
+    Pouvant comporter un timer ou non, ce quiz renvoie un caractère en morse à décoder
     """
     score = 0
     while True:
@@ -212,6 +224,16 @@ def quiz(timed=True, timeout=10):
             s = input(str(morse[clear_text]) + "\n> ")
         if s == TimeoutError:
             print("Temps écoulé, sois plus rapide la prochaine fois !")
+            if show_answer:
+                if clear_text in mnemotechnique.keys():
+                    print(
+                        "La bonne réponse est {}[{}]".format(
+                            clear_text, mnemotechnique[clear_text]
+                        )
+                    )
+                else:
+                    print("La bonne réponse est {}".format(clear_text))
+
         elif s != clear_text:
             if clear_text in mnemotechnique.keys():
                 print(
@@ -228,7 +250,7 @@ def quiz(timed=True, timeout=10):
             print("Bonne réponse ! Votre score est de {} points".format(score))
 
 
-def quiz_junior(timed=True, timeout=10):
+def quiz_junior(timed=True, timeout=10, show_answer=False):
     """
     Pouvant comporter un timer ou non, ce quiz renvoie un moyen mnémotechnique dont il faut extraire le morse
     """
@@ -240,8 +262,11 @@ def quiz_junior(timed=True, timeout=10):
             s = timed_input(mnemoschematik[memo], timeout=timeout)
         else:
             s = input(mnemoschematik[memo] + "\n> ")
+
         if s == TimeoutError:
-            print("tmps écoulé, sois plus rapide la prochaine fois !")
+            print("Temps écoulé, sois plus rapide la prochaine fois !")
+            if show_answer:
+                print(f"La bonne réponse était {memo}")
         elif s != memo:
             print("\x1b[0;37;41mFaux ! La bonne réponse est {}\x1b[0m".format(memo))
             print("Votre score est de {} points".format(score))
@@ -303,6 +328,14 @@ parser.add_option(
     default=True,
 )
 parser.add_option(
+    "-s",
+    "--show-answer",
+    action="store_true",
+    dest="show_answer",
+    help="Show answer on timeout",
+    default=False,
+)
+parser.add_option(
     "-l",
     "--length",
     dest="length",
@@ -339,6 +372,15 @@ else:
 
 while True:
     if gm == multi_quiz:
-        gm(timed=options.timed, timeout=options.timeout, length=options.length)
+        gm(
+            timed=options.timed,
+            timeout=options.timeout,
+            length=options.length,
+            show_answer=options.show_answer,
+        )
     else:
-        gm(timed=options.timed, timeout=options.timeout)
+        gm(
+            timed=options.timed,
+            timeout=options.timeout,
+            show_answer=options.show_answer,
+        )
