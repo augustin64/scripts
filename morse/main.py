@@ -16,7 +16,7 @@ try:
 
     choose = enquiries.choose
 except:  # On offre une autre option si le module enquiries n'est pas installé
-    # ce module n'étant pas compatible égaleent sur toutes les plateformes
+    # ce module n'étant pas compatible également sur toutes les plateformes
     def choose(query, options):
         print(query)
         print(
@@ -159,7 +159,7 @@ def multi_quiz(length=10, timed=True, timeout=5):
             s = input(encoded + "\n").lower()
 
         if s == TimeoutError:
-            print("\nTemps écoulé, sois plus rapide la prochaine fois !")
+            print(f"\nTemps écoulé, sois plus rapide la prochaine fois ! La réponse était : {clear_text}")
         elif s != clear_text:
             print(f"Faux ! La bonne réponse : {clear_text}")
             print(f"Votre réponse était :     {diff(clear_text,s)}")
